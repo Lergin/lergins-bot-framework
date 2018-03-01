@@ -7,42 +7,19 @@ export enum ConfigEventType {
 }
 
 export abstract class Config {
-  private static _instance: Config = null;
-
-  protected constructor() {
-    if (Config._instance) {
-      throw new Error("There can only be one instance of Config!");
-    }
-
-    Config._instance = this;
-  }
-
-  static get instance(): Config {
-    return Config._instance;
-  }
-
   /**
    * gets the value from the configuration
    * @param path path as a string eather splited by . or / use Config.splitPath() to get an array of path elements
    */
   abstract async get(path): Promise<any>;
-  static get(path): Promise<any> {
-    return this.instance.get(path);
-  }
 
-  static async has(path): Promise<Boolean> {
-    return (await Config.get(path)) !== null;
+  async has(path): Promise<Boolean> {
+    return (await this.get(path)) !== null;
   }
 
   abstract set(path, val): void;
-  static set(path, val): void {
-    return this.instance.set(path, val);
-  }
 
   abstract on(path: string, type: ConfigEventType, func: Function);
-  static on(path: string, type: ConfigEventType, func: Function) {
-    return this.instance.on(path, type, func);
-  }
 
   protected static splitPath(path) {
     return path

@@ -1,17 +1,17 @@
 import { NotificationObserver } from "./NotificationObserver";
 
 export class NotificationSender {
-  private static observers: Set<NotificationObserver> = new Set();
+  private observers: Set<NotificationObserver> = new Set();
 
-  static register(observer: NotificationObserver) {
-    NotificationSender.observers.add(observer);
+  register(observer: NotificationObserver) {
+    this.observers.add(observer);
   }
 
-  static unregister(observer: NotificationObserver) {
-    NotificationSender.observers.delete(observer);
+  unregister(observer: NotificationObserver) {
+    this.observers.delete(observer);
   }
 
-  static send(key: string, message: any) {
-    NotificationSender.observers.forEach(observer => observer.update(key, message));
+  send(key: string, message: any) {
+    this.observers.forEach(observer => observer.update(key, message));
   }
 }

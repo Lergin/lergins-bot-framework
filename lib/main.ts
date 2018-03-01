@@ -22,12 +22,14 @@ export class BotFramework {
     private observers: Map<String, NotificationObserver> = new Map();
     private readonly _TwitterBot: TwitterBotConstructor;
     private readonly _DiscordWebhook: DiscordWebhookConstructor;
+    readonly config: Config;
+    readonly notificationSender: NotificationSender = new NotificationSender();
 
     constructor(builder: BotFramework.Builder){
         this._TwitterBot = builder._TwitterBot;
         this._DiscordWebhook = builder._DiscordWebhook;
 
-        this.initConfig(builder._configFolderPath);
+        this.config = this.initConfig(builder._configFolderPath);
         this.initObservers();
     }
 
@@ -50,10 +52,10 @@ export class BotFramework {
             const db = database();
 
             console.log(`Loading configuration from firebase (${serviceAccount.project_id})`);
-            new FirebaseConfig(db.ref(configFile.firebase_config_path || "config"));
+            return new FirebaseConfig(db.ref(configFile.firebase_config_path || "config"));
         } else {
             console.log(`Loading configuration from config.json`);
-            new JsonConfig(path.join(configFolderPath, "config.json"));
+            return new JsonConfig(path.join(configFolderPath, "config.json"));
         }
     }
 
@@ -76,33 +78,35 @@ export class BotFramework {
         }
 
         this.observers.set(key, observer);
-        NotificationSender.register(observer);
+        this.notificationSender.register(observer);
     }
 
     private unregisterObserver(key) {
-        NotificationSender.unregister(this.observers.get(key));
+        this.notificationSender.unregister(this.observers.get(key));
         this.observers.delete(key);
     }
 
     private initObservers(){
-        Config.on("observers", ConfigEventType.CHILD_ADDED, (settings, key) => {
+        this.config.on("observers", ConfigEventType.CHILD_ADDED, (settings, key) => {
             this.registerObserver(settings, key);
             console.log(`Registered Observer: ${key} (${settings.type})`);
         });
 
-        Config.on("observers", ConfigEventType.CHILD_CHANGED, (settings, key) => {
+        this.config.on("observers", ConfigEventType.CHILD_CHANGED, (settings, key) => {
             this.unregisterObserver(key);
             this.registerObserver(settings, key);
             console.log(`Updated Observer: ${key} (${settings.type})`);
         });
 
-        Config.on("observers", ConfigEventType.CHILD_REMOVED, (settings, key) => {
+        this.config.on("observers", ConfigEventType.CHILD_REMOVED, (settings, key) => {
             this.unregisterObserver(key);
             console.log(`Deleted Observer: ${key} (${settings.type})`);
         });
     }
 
-
+    send(key: string, message: any){
+        return this.notificationSender.send(key, message);
+    }
 }
 
 export module BotFramework {
@@ -152,13 +156,13 @@ class MyTwitterBot extends NotificationTwitterBot{
     }
 }
 
-new BotFramework.Builder()
+const botFramework = new BotFramework.Builder()
 .discordWebhook(MyDiscordWebhook)
 .twitterBot(MyTwitterBot)
 .configFolderPath(path.join(__dirname, '..'))
 .build();
 
 setTimeout(() => {
-    NotificationSender.send('hey', 'hoho');
+    botFramework.send('hey', 'hoho');
 }, 100);
 
