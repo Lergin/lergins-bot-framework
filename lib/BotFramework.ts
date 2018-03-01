@@ -10,7 +10,7 @@ import { FirebaseConfig } from "./config/FirebaseConfig";
 import { NotificationObserver } from "./notifications/NotificationObserver";
 import { ClientOptions } from "discord.js";
 
-enum ObserverType {
+export enum ObserverType {
     TWITTER = 'twitter',
     DISCORD_WEBHOOK = 'discord_webhook'
 }
@@ -135,34 +135,3 @@ export module BotFramework {
         }
     }
 }
-
-class MyDiscordWebhook extends DiscordWebhook{
-    constructor(settings: { id: string, key: string, options?: ClientOptions }){
-        super(settings);
-    }
-
-    update(key, string){
-        console.log("Discord", key, " ", string);
-    }
-}
-
-class MyTwitterBot extends NotificationTwitterBot{
-    constructor(settings){
-        super(settings);
-    }
-
-    update(key, string){
-        console.log("Twitter", key, " ", string);
-    }
-}
-
-const botFramework = new BotFramework.Builder()
-.discordWebhook(MyDiscordWebhook)
-.twitterBot(MyTwitterBot)
-.configFolderPath(path.join(__dirname, '..'))
-.build();
-
-setTimeout(() => {
-    botFramework.send('hey', 'hoho');
-}, 100);
-

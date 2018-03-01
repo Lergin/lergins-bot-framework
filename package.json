@@ -1,10 +1,13 @@
 {
   "name": "lergins-bot-framework",
   "version": "1.0.0",
-  "description": "",
-  "main": "lib/main.ts",
+  "description": "My personal little framework for building bots mostly to not have projects that have 90% copied code from another project",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "discord.js": "^11.3.0",
