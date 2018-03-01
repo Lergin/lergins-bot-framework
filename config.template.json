@@ -1,0 +1,10 @@
+{
+  "use_firebase": false,
+  "observer": {
+    "discordwebhook": {
+      "type": "discord_webhook",
+      "id": "0000000000000",
+      "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  }
+}

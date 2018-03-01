@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es6",
+    "lib": [
+      "es2017",
+      "dom"
+    ],
+    "declaration": true,
+    "outDir": "build"
+  },
+  "include": [
+    "lib"
+  ]
+}
