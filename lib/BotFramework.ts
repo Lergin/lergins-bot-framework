@@ -26,7 +26,7 @@ export class BotFramework {
     private initConfig(configFolderPath: string){
         let configFile: any = { use_firebase: true, firebase_service_account: 'firebase_service_account.json' };
         try {
-            configFile = require(path.join(configFolderPath, 'config.json'));
+            configFile = { ...configFile, ...require(path.join(configFolderPath, 'config.json')) };
         } catch (ex) {
             console.log(`No config file provided: Trying to load from firebase using firebase_service_account.json`);
         }
