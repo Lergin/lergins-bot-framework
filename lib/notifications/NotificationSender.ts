@@ -11,7 +11,7 @@ export class NotificationSender {
     this.observers.delete(observer);
   }
 
-  send(key: string, message: any) {
-    this.observers.forEach(observer => observer.update(key, message));
+  send(type: string, message: any) {
+    this.observers.forEach(observer => observer.update(type, message));
   }
 }

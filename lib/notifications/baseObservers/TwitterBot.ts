@@ -1,13 +1,12 @@
 import * as Twitter from "twit";
-import { NotificationObserver } from './NotificationObserver';
-import { NotificationSender } from "./NotificationSender";
+import { NotificationObserver } from '../NotificationObserver';
 
-export abstract class NotificationTwitterBot extends Twitter implements NotificationObserver {
+export abstract class TwitterBot extends Twitter implements NotificationObserver {
   constructor(settings){
     super(settings);
   }
 
-  abstract update(key: string, message: any);
+  abstract update(type: string, message: any);
 
   async send(message) {
     let a = (this as any).post('statuses/update', {status: message});

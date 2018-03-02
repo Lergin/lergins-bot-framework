@@ -1,33 +1,23 @@
 import { initializeApp, credential, database, firestore } from "firebase-admin";
 import * as path from "path";
 
-import { DiscordWebhook } from "./notifications/DiscordWebhook";
 import { NotificationSender } from "./notifications/NotificationSender";
-import { NotificationTwitterBot } from "./notifications/TwitterBot";
 import { Config, ConfigEventType } from "./config/Config";
 import { JsonConfig } from "./config/JsonConfig";
 import { FirebaseConfig } from "./config/FirebaseConfig";
 import { NotificationObserver } from "./notifications/NotificationObserver";
 import { ClientOptions } from "discord.js";
 
-export enum ObserverType {
-    TWITTER = 'twitter',
-    DISCORD_WEBHOOK = 'discord_webhook'
-}
-
-export type DiscordWebhookConstructor = (new (settings: { id: string, key: string, options?: ClientOptions }) => DiscordWebhook);
-export type TwitterBotConstructor = (new (settings) => NotificationTwitterBot);
+export type NotificationObserverImpl = (new (settings) => NotificationObserver);
 
 export class BotFramework {
     private observers: Map<String, NotificationObserver> = new Map();
-    private readonly _TwitterBot: TwitterBotConstructor;
-    private readonly _DiscordWebhook: DiscordWebhookConstructor;
+    private readonly _ObserverImplementations: Map<string, NotificationObserverImpl>;
     readonly config: Config;
     readonly notificationSender: NotificationSender = new NotificationSender();
 
     constructor(builder: BotFramework.Builder){
-        this._TwitterBot = builder._TwitterBot;
-        this._DiscordWebhook = builder._DiscordWebhook;
+        this._ObserverImplementations = builder._Observer;
 
         this.config = this.initConfig(builder._configFolderPath);
         this.initObservers();
@@ -59,69 +49,51 @@ export class BotFramework {
         }
     }
 
-    private registerObserver(settings: { type: ObserverType }, key) {
+    private registerObserver(settings: { type: string }, id) {
         if (!settings.type) throw new Error('Observer Type is necessary!');
+        if(!this._ObserverImplementations.has(settings.type)) throw new Error(`Unknown Observer Type ${settings.type}`);
 
-        let observer;
+        const observer = new (this._ObserverImplementations.get(settings.type))(settings);
 
-        switch (settings.type) {
-            case ObserverType.DISCORD_WEBHOOK:
-                if (!(settings as any).id || !(settings as any).key) throw new Error("Each webhook needs an id and a key!");
-
-                observer = new this._DiscordWebhook(settings as any);
-                break;
-            case ObserverType.TWITTER:
-                observer = new this._TwitterBot(settings);
-                break;
-            default:
-                throw new Error('Unknown Observer Type');
-        }
-
-        this.observers.set(key, observer);
+        this.observers.set(id, observer);
         this.notificationSender.register(observer);
     }
 
-    private unregisterObserver(key) {
-        this.notificationSender.unregister(this.observers.get(key));
-        this.observers.delete(key);
+    private unregisterObserver(id) {
+        this.notificationSender.unregister(this.observers.get(id));
+        this.observers.delete(id);
     }
 
     private initObservers(){
-        this.config.on("observers", ConfigEventType.CHILD_ADDED, (settings, key) => {
-            this.registerObserver(settings, key);
-            console.log(`Registered Observer: ${key} (${settings.type})`);
+        this.config.on("observers", ConfigEventType.CHILD_ADDED, (settings, id) => {
+            this.registerObserver(settings, id);
+            console.log(`Registered Observer: ${id} (${settings.type})`);
         });
 
-        this.config.on("observers", ConfigEventType.CHILD_CHANGED, (settings, key) => {
-            this.unregisterObserver(key);
-            this.registerObserver(settings, key);
-            console.log(`Updated Observer: ${key} (${settings.type})`);
+        this.config.on("observers", ConfigEventType.CHILD_CHANGED, (settings, id) => {
+            this.unregisterObserver(id);
+            this.registerObserver(settings, id);
+            console.log(`Updated Observer: ${id} (${settings.type})`);
         });
 
-        this.config.on("observers", ConfigEventType.CHILD_REMOVED, (settings, key) => {
-            this.unregisterObserver(key);
-            console.log(`Deleted Observer: ${key} (${settings.type})`);
+        this.config.on("observers", ConfigEventType.CHILD_REMOVED, (settings, id) => {
+            this.unregisterObserver(id);
+            console.log(`Deleted Observer: ${id} (${settings.type})`);
         });
     }
 
-    send(key: string, message: any){
-        return this.notificationSender.send(key, message);
+    send(type: string, message: any){
+        return this.notificationSender.send(type, message);
     }
 }
 
 export module BotFramework {
     export class Builder {
-        _DiscordWebhook: (new (settings: { id: string, key: string, options?: ClientOptions }) => DiscordWebhook)
-        _TwitterBot: TwitterBotConstructor
+        _Observer: Map<string, NotificationObserverImpl> = new Map();
         _configFolderPath: string;
 
-        discordWebhook(discordWebhook: (new (settings: { id: string, key: string, options?: ClientOptions }) => DiscordWebhook)): BotFramework.Builder {
-            this._DiscordWebhook = discordWebhook;
-            return this;
-        }
-
-        twitterBot(twitterBot: (new (settings) => NotificationTwitterBot)): BotFramework.Builder {
-            this._TwitterBot = twitterBot;
+        observer(type: string, observer: NotificationObserverImpl): BotFramework.Builder {
+            this._Observer.set(type, observer);
             return this;
         }
 
