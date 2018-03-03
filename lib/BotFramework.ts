@@ -7,22 +7,49 @@ import { JsonConfig } from "./config/JsonConfig";
 import { FirebaseConfig } from "./config/FirebaseConfig";
 import { NotificationObserver } from "./notifications/NotificationObserver";
 import { ClientOptions } from "discord.js";
+import { Updater } from "./updater/Updater";
 
 export type NotificationObserverImpl = (new (settings) => NotificationObserver);
 
 export class BotFramework {
-    private observers: Map<String, NotificationObserver> = new Map();
-    private readonly _ObserverImplementations: Map<string, NotificationObserverImpl>;
+    private observers: Map<string, NotificationObserver> = new Map();
+    private updaters: Set<Updater> = new Set();
+    private readonly _ObserverImplementations: Map<string, NotificationObserverImpl> = new Map();
     private readonly _forceFirebaseInit: boolean = false;
     private readonly _config: Config;
     private readonly _notificationSender: NotificationSender = new NotificationSender();
+    private startTime = -1;
 
-    constructor(builder: BotFramework.Builder){
+    constructor(builder: BotFramework.Builder) {
         this._ObserverImplementations = builder._Observer;
+        this.updaters = builder._updaters;
         this._forceFirebaseInit = builder._forceFirebaseInit;
 
         this._config = this.initConfig(builder._configFolderPath);
         this.initObservers();
+    }
+
+    start() {
+        this.startTime = new Date().getTime();
+        this.initUpdater();
+    }
+
+    async addUpdater(updater: Updater) {
+        this.updaters.add(updater);
+
+        if (this.startTime > 0){
+            updater.startTime = (new Date().getTime() - this.startTime - await this.config().get(`updater.${updater.configId}.startTime`) || -1);
+
+            this.config().on(`updater.${updater.configId}.interval`, ConfigEventType.VALUE, val => updater.interval = val);
+    
+            try {
+                updater.init();
+            } catch (err) {
+                console.error(`Error with updater ${updater.id}`, err);
+            }
+    
+            console.log(`Initialized additional Updater ${updater.id}`);
+        }
     }
 
     private initConfig(configFolderPath: string){
@@ -87,6 +114,26 @@ export class BotFramework {
         });
     }
 
+    private async initUpdater(){
+        await Promise.all([...this.updaters.values()].map(async updater => {
+            updater.startTime = (await this.config().get(`updater.${updater.configId}.startTime`) || -1);
+
+            this.config().on(`updater.${updater.configId}.interval`, ConfigEventType.VALUE, val => updater.interval = val);
+
+            return;
+        }));
+
+        this.updaters.forEach(updater => {
+            try {
+                updater.init();
+            } catch (err) {
+                console.error(`Error with updater ${updater.id}`, err);
+            }
+        });
+
+        console.log(`Initialized ${this.updaters.size} Updaters`);
+    }
+
     send(type: string, message: any){
         return this.notificationSender().send(type, message);
     }
@@ -103,11 +150,17 @@ export class BotFramework {
 export module BotFramework {
     export class Builder {
         _Observer: Map<string, NotificationObserverImpl> = new Map();
+        _updaters: Set<Updater> = new Set();
         _configFolderPath: string;
         _forceFirebaseInit: boolean = false;
 
         observer(type: string, observer: NotificationObserverImpl): BotFramework.Builder {
             this._Observer.set(type, observer);
+            return this;
+        }
+
+        updater(updater: Updater): BotFramework.Builder {
+            this._updaters.add(updater);
             return this;
         }
 
