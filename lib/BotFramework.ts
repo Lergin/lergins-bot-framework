@@ -1,4 +1,4 @@
-import { initializeApp, credential, database, firestore } from "firebase-admin";
+import { initializeApp, credential, database, firestore, app } from "firebase-admin";
 import * as path from "path";
 
 import { NotificationSender } from "./notifications/NotificationSender";
@@ -13,13 +13,15 @@ export type NotificationObserverImpl = (new (settings) => NotificationObserver);
 export class BotFramework {
     private observers: Map<String, NotificationObserver> = new Map();
     private readonly _ObserverImplementations: Map<string, NotificationObserverImpl>;
-    readonly config: Config;
-    readonly notificationSender: NotificationSender = new NotificationSender();
+    private readonly _forceFirebaseInit: boolean = false;
+    private readonly _config: Config;
+    private readonly _notificationSender: NotificationSender = new NotificationSender();
 
     constructor(builder: BotFramework.Builder){
         this._ObserverImplementations = builder._Observer;
+        this._forceFirebaseInit = builder._forceFirebaseInit;
 
-        this.config = this.initConfig(builder._configFolderPath);
+        this._config = this.initConfig(builder._configFolderPath);
         this.initObservers();
     }
 
@@ -31,7 +33,7 @@ export class BotFramework {
             console.log(`No config file provided: Trying to load from firebase using firebase_service_account.json`);
         }
 
-        if (configFile.use_firebase) {
+        if (configFile.use_firebase || this._forceFirebaseInit) {
             const serviceAccount = require(path.join(configFolderPath, configFile.firebase_service_account));
 
             initializeApp({
@@ -39,9 +41,12 @@ export class BotFramework {
                 databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`
             });
 
+            console.log(`Initilaized firebase (${serviceAccount.project_id})`);
+        }
+        
+        if(configFile.use_firebase) {
             const db = database();
-
-            console.log(`Loading configuration from firebase (${serviceAccount.project_id})`);
+            console.log(`Loading configuration from firebase`);
             return new FirebaseConfig(db.ref(configFile.firebase_config_path || "config"));
         } else {
             console.log(`Loading configuration from config.json`);
@@ -56,34 +61,42 @@ export class BotFramework {
         const observer = new (this._ObserverImplementations.get(settings.type))(settings);
 
         this.observers.set(id, observer);
-        this.notificationSender.register(observer);
+        this.notificationSender().register(observer);
     }
 
     private unregisterObserver(id) {
-        this.notificationSender.unregister(this.observers.get(id));
+        this.notificationSender().unregister(this.observers.get(id));
         this.observers.delete(id);
     }
 
     private initObservers(){
-        this.config.on("observers", ConfigEventType.CHILD_ADDED, (settings, id) => {
+        this.config().on("observers", ConfigEventType.CHILD_ADDED, (settings, id) => {
             this.registerObserver(settings, id);
             console.log(`Registered Observer: ${id} (${settings.type})`);
         });
 
-        this.config.on("observers", ConfigEventType.CHILD_CHANGED, (settings, id) => {
+        this.config().on("observers", ConfigEventType.CHILD_CHANGED, (settings, id) => {
             this.unregisterObserver(id);
             this.registerObserver(settings, id);
             console.log(`Updated Observer: ${id} (${settings.type})`);
         });
 
-        this.config.on("observers", ConfigEventType.CHILD_REMOVED, (settings, id) => {
+        this.config().on("observers", ConfigEventType.CHILD_REMOVED, (settings, id) => {
             this.unregisterObserver(id);
             console.log(`Deleted Observer: ${id} (${settings.type})`);
         });
     }
 
     send(type: string, message: any){
-        return this.notificationSender.send(type, message);
+        return this.notificationSender().send(type, message);
+    }
+
+    config(){
+        return this._config;
+    }
+
+    notificationSender(){
+        return this._notificationSender;
     }
 }
 
@@ -91,6 +104,7 @@ export module BotFramework {
     export class Builder {
         _Observer: Map<string, NotificationObserverImpl> = new Map();
         _configFolderPath: string;
+        _forceFirebaseInit: boolean = false;
 
         observer(type: string, observer: NotificationObserverImpl): BotFramework.Builder {
             this._Observer.set(type, observer);
@@ -99,6 +113,11 @@ export module BotFramework {
 
         configFolderPath(configFolderPath: string): BotFramework.Builder {
             this._configFolderPath = configFolderPath;
+            return this;
+        }
+
+        forceFirebaseInit(): BotFramework.Builder {
+            this._forceFirebaseInit = true;
             return this;
         }
 

@@ -1,3 +1,3 @@
 export interface NotificationObserver {
-  update(type: string, message: string);
+  update(type: string, message: any);
 }

@@ -9,12 +9,6 @@ export abstract class TwitterBot extends Twitter implements NotificationObserver
   abstract update(type: string, message: any);
 
   async send(message) {
-    let a = (this as any).post('statuses/update', {status: message});
-
-    try {
-      let data = await a.then(res => res.data).catch(console.error);
-    }catch(err ){
-      console.log(err);
-    }
+    return (this as any).post('statuses/update', {status: message});
   }
 }
