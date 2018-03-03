@@ -1,9 +1,26 @@
 {
   "name": "lergins-bot-framework",
-  "version": "1.2.0",
+  "version": "1.3.3",
   "description": "My personal little framework for building bots mostly to not have projects that have 90% copied code from another project",
+  "bugs": {
+    "url": "https://github.com/Lergin/lergins-bot-framework/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Malte Laukötter",
+    "email": "hey@lergin.de",
+    "url": "https://lergin.de"
+  },
+  "files": [
+    "build",
+    "lib",
+    "LICENSE.txt",
+    "config.template.json",
+    "tsconfig.json"
+  ],
   "main": "build/index.js",
   "types": "build/index.d.ts",
+  "repository": "github:Lergin/lergins-bot-framework",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
@@ -11,13 +28,13 @@
   },
   "dependencies": {
     "discord.js": "^11.3.0",
-    "firebase-admin": "^5.9.1",
     "node-fetch": "^2.0.0",
     "twit": "^2.2.9"
   },
+  "peerDependencies": {
+    "firebase-admin": "^5.9.1"
+  },
   "devDependencies": {
     "typescript": "^2.7.2"
-  },
-  "author": "Malte Laukötter",
-  "license": "MIT"
+  }
 }
