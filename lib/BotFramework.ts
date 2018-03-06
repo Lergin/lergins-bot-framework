@@ -57,7 +57,12 @@ export class BotFramework {
         try {
             configFile = { ...configFile, ...require(path.join(configFolderPath, 'config.json')) };
         } catch (ex) {
-            console.log(`No config file provided: Trying to load from firebase using firebase_service_account.json`);
+            if (ex.message.startsWith("Cannot find module")) {
+                console.log(`No config file provided: Trying to load from firebase using firebase_service_account.json`);
+            } else {
+                console.error(ex.message);
+                process.exit();
+            }
         }
 
         if (configFile.use_firebase || this._forceFirebaseInit) {

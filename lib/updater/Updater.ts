@@ -56,7 +56,7 @@ export abstract class Updater {
 
     let currInterval = this.interval;
 
-    if(currInterval === -1) return;
+    if(!(currInterval > 1)) return;
     
     let run = null;
     
@@ -68,7 +68,7 @@ export abstract class Updater {
         clearInterval(run);
         currInterval = this.interval;
 
-        if(currInterval !== -1){
+        if(currInterval > 0){
           run = setInterval(() => updatingIntervalFunc(), this.interval);
         }
       }
@@ -79,7 +79,7 @@ export abstract class Updater {
 
   static sendError(err, info) {
     if (err.name === "FetchError") {
-      console.error(`Error Response from Hive: ${info}`)
+      console.error(`Error Response: ${info}`)
     } else {
       console.error(`error while updating ${info}`, err)
     }

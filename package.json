@@ -1,6 +1,6 @@
 {
   "name": "lergins-bot-framework",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "description": "My personal little framework for building bots mostly to not have projects that have 90% copied code from another project",
   "bugs": {
     "url": "https://github.com/Lergin/lergins-bot-framework/issues"
