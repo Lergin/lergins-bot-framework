@@ -18,7 +18,7 @@ export abstract class Updater {
       this._running = true;
       console.log(`Starting Updater: ${this.id}`)
       
-      if(this._interval !== -1){
+      if(this.hasInterval()){
         this.start();
       }
     }, this.startTime);
@@ -37,10 +37,10 @@ export abstract class Updater {
   }
 
   set interval(interval: number) {
-    if (this._running && this._interval === -1){
+    if (this._running && !this.hasInterval() && interval > 1) {
       this._interval = interval;
       this.start();
-    }else{
+    } else {
       this._interval = interval;
     }
   }
@@ -49,6 +49,9 @@ export abstract class Updater {
     return this._interval;
   }
 
+  hasInterval() {
+    return this.interval > 1
+  }
 
   // runs the function every interval, if the interval value is updated it waits for the current interval to end and from then on uses the new one
   protected eachInterval(fun: Function) {
@@ -56,7 +59,7 @@ export abstract class Updater {
 
     let currInterval = this.interval;
 
-    if(!(currInterval > 1)) return;
+    if(!this.hasInterval()) return;
     
     let run = null;
     
@@ -68,7 +71,7 @@ export abstract class Updater {
         clearInterval(run);
         currInterval = this.interval;
 
-        if(currInterval > 0){
+        if(this.hasInterval()) {
           run = setInterval(() => updatingIntervalFunc(), this.interval);
         }
       }
